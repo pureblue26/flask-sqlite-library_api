@@ -1,0 +1,13 @@
+# 虚拟环境（别人可以用 requirements.txt 重建，不需要存档）
+.venv/
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 数据库文件（运行时生成，不入库）
+*.db
+
+# 编辑器/系统文件
+.vscode/
+.DS_Store
