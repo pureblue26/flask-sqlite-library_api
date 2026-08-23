@@ -67,7 +67,6 @@ def get_book_by_id(book_id: int) -> Book | None:
         if result is not None:
             return Book(result[0],result[1],result[2],BookStatus(result[3]))
         else:
-            print("不存在该ID的书籍")
             return None
     except sqlite3.Error as e:
         print("数据库错误: ",e)
