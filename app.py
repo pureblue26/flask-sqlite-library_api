@@ -30,8 +30,12 @@ def handle_not_borrowed(e):
 
 @app.get("/books")
 def list_books():
-    books = services.get_books()
-    return {"books": [books_to_dict(b) for b in books]},200
+    q = request.args.get("q")     
+    if q:
+        books = services.search_books(q)
+    else:
+        books = services.get_books()
+    return {"books": [books_to_dict(b) for b in books]}, 200
 
 
 @app.post("/books")

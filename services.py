@@ -49,5 +49,9 @@ def get_book(book_id: int)->Book:
 def get_books()->list[Book]:
     return database.get_all_books()
 
+def search_books(keyword:str)->list[Book]:
+    return database.search_books(keyword)
+
+
 if __name__ == "__main__":
     books = get_books()

@@ -29,7 +29,6 @@ def init_db()->None:
             """
             cursor.execute(query)
             conn.commit()
-            conn.close()
             return None
     except sqlite3.Error as e:
         print("数据库错误: ",e)
@@ -47,7 +46,6 @@ def create_book(title: str, author: str) -> Book:
         (title,author))
         book_id = cursor.lastrowid
         conn.commit()
-        conn.close()
         return Book(book_id,title,author)
     except sqlite3.Error as e:
         print("数据库错误: ",e)
@@ -116,13 +114,28 @@ def delete_book(book_id: int) -> None:
     finally:
         if conn: conn.close()
 
+
+def search_books(keyword:str)->list[Book]:
+    """按书名模糊搜索。无匹配结果时返回空列表。"""
+    try:
+        conn = None
+        conn = get_connection()
+        cursor = conn.cursor()
+        search_keyword = "%" + keyword +"%"
+        cursor.execute("SELECT * FROM books WHERE title LIKE ?",(search_keyword,))
+        result = cursor.fetchall()
+        book_lists = []
+        if result:
+            for book in result:
+                books = Book(book[0],book[1],book[2],BookStatus(book[3]))
+                book_lists.append(books)
+            return book_lists
+        else:
+            return book_lists
+    except sqlite3.Error as e:
+        print("数据库错误: ",e)
+    finally:
+        if conn: conn.close()
+
 if __name__ == "__main__":
     init_db()
-    # book = get_book_by_id(1)
-    # update_book_status(1,BookStatus.AVAILABLE)
-    # create_book("测试书","张三")
-    delete_book(2)
-    books = get_all_books()
-    print(books)    
-    # book = create_book("三国演义","罗贯中")
-    # print(book.id,"\n",book.title,"\n",book.author,"\n",book.status)
