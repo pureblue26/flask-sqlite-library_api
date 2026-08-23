@@ -26,6 +26,7 @@
 | POST | /books/<id>/borrow | 借书 |
 | POST | /books/<id>/return | 还书 |
 | POST | /books/<id>/delete | 删除图书 |
+| GET  |/books q=?|模糊搜索图书|
 
 ## 项目结构
 config.py   配置信息
