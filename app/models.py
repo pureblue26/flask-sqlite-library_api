@@ -1,18 +1,24 @@
-from dataclasses import dataclass
 from enum import Enum
-
+from pydantic import BaseModel
 
 class BookStatus(Enum):
     AVAILABLE = "available"
     BORROWED = "borrowed"
 
-@dataclass
-class Book:
-    id:int
+
+class BookBase(BaseModel):
+    id:int | None = None
     title:str
     author:str
-    status:BookStatus = BookStatus.AVAILABLE
+    status:str = "available"
 
+
+class BookCreate(BaseModel):
+    title:str
+    author:str
+
+class BookOut(BookBase):
+    pass
 
 class BookNotFoundError(Exception):
     pass
