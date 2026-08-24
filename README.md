@@ -9,15 +9,14 @@
 - 按书名模糊搜索（`?q=关键词`）
 
 ## 环境配置
-- Python 3.10+
-- 虚拟环境 venv
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) 包管理器
 
 ## 构建项目
-1. 创建虚拟环境并激活：`python -m venv .venv`
-2. 安装依赖：`pip install -r requirements.txt`
-3. 启动服务：`python -m uvicorn app.main:app --host 127.0.0.1 --port 8000`
-4. 浏览器打开 http://127.0.0.1:8000
-5. 交互式 API 文档：http://127.0.0.1:8000/docs
+1. 安装依赖：`uv sync`
+2. 启动服务：`uv run uvicorn app.main:app --host 127.0.0.1 --port 8000`
+3. 浏览器打开 http://127.0.0.1:8000
+4. 交互式 API 文档：http://127.0.0.1:8000/docs
 
 ## API 接口
 | 方法 | 路径 | 说明 |
@@ -42,10 +41,11 @@ app/
 
 ## 测试
 ```bash
-pytest tests/
+uv run pytest
 ```
 使用 FastAPI TestClient + pytest fixture（临时数据库隔离）。
 
 ## 版本历史
 - v1.0：Flask + 同步 SQLite（已打 tag 保留）
 - v2.0：FastAPI + 异步 aiosqlite（当前）
+- 包管理：uv（pyproject.toml + uv.lock）
