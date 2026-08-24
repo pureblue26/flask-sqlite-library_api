@@ -1,27 +1,48 @@
-"""pytest 共享配置：所有测试文件都能用这里的 fixture（2.0 FastAPI 版）。"""
+"""pytest 共享配置（3.0：PostgreSQL 版，测试专用 NullPool 引擎）。
 
-import os
+关键：测试用独立引擎（NullPool，每次新连接），
+避免 TestClient 与全局引擎连接池的事件循环冲突。
+"""
+
+import asyncio
 
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
-import app.config as config
-import app.database as database
+from app.config import DATABASE_URL
+from app.models import Base
 from app.main import app
 
 
 @pytest.fixture
 def client():
-    """每个测试前：用临时数据库初始化，返回 FastAPI TestClient。"""
-    config.DB_FILE = config.BASE_DIR / "_test.db"
-    if os.path.exists(config.DB_FILE):
-        os.remove(config.DB_FILE)
+    """每个测试前：建测试引擎、建表、清空，返回 FastAPI TestClient。"""
+    # 测试专用引擎：NullPool = 不复用连接（避免事件循环冲突）
+    engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+    TestSession = async_sessionmaker(engine, expire_on_commit=False)
 
-    # 异步初始化数据库（init_db 是 async 函数）
-    import asyncio
-    asyncio.run(database.init_db())
+    async def setup():
+        # 建表（幂等）
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        # 清空表
+        async with TestSession() as session:
+            await session.execute(text("TRUNCATE TABLE books RESTART IDENTITY"))
+            await session.commit()
+
+    asyncio.run(setup())
 
     from fastapi.testclient import TestClient
-    yield TestClient(app)
 
-    if os.path.exists(config.DB_FILE):
-        os.remove(config.DB_FILE)
+    # 让应用依赖注入使用测试的 Session 工厂
+    from app import database
+    original_factory = database.SessionFactory
+    database.SessionFactory = TestSession
+
+    try:
+        yield TestClient(app)
+    finally:
+        database.SessionFactory = original_factory
+        asyncio.run(engine.dispose())

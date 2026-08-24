@@ -1,32 +1,13 @@
-from enum import Enum
-from pydantic import BaseModel
+from sqlalchemy import Integer, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
-class BookStatus(Enum):
-    AVAILABLE = "available"
-    BORROWED = "borrowed"
-
-
-class BookBase(BaseModel):
-    id:int | None = None
-    title:str
-    author:str
-    status:str = "available"
-
-
-class BookCreate(BaseModel):
-    title:str
-    author:str
-
-class BookOut(BookBase):
+class Base(DeclarativeBase):
     pass
 
-class BookNotFoundError(Exception):
-    pass
+class Book(Base):
+    __tablename__ = "books"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    author: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="available", nullable=False)
 
-
-class BookUnavailableError(Exception):
-    pass
-
-
-class BookNotBorrowedError(Exception):
-    pass
