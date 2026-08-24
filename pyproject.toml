@@ -1,0 +1,24 @@
+[project]
+name = "library-api"
+version = "2.0.0"
+description = "图书管理 API（FastAPI + SQLite 异步版）"
+authors = [
+    { name = "pureblue26", email = "2791641729@qq.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "aiosqlite>=0.22.1",
+    "fastapi>=0.141.1",
+    "uvicorn[standard]>=0.52.4",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
