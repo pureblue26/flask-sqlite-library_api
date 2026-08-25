@@ -1,4 +1,5 @@
 import app.config as config
+import app.constant as constant
 import app.database as database
 import app.services as services
 from app.schemas import (
@@ -88,7 +89,7 @@ async def delete_book(
      session: AsyncSession = Depends(database.get_session)):
     await services.get_book(session,book_id)
     await database.delete_book(session,book_id)
-    return {"message": "删除成功"}
+    return {"message": constant.SUCCESS_DELETE_BOOK}
 
 @app.get("/")
 def root():

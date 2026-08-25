@@ -6,6 +6,7 @@ from app.schemas import (
     BookNotBorrowedError,
     BookOut,
 )
+from app import constant
 import app.database as database
 import asyncio
 
@@ -13,12 +14,12 @@ async def borrow_book(session:AsyncSession,book_id: int) -> BookOut:
     
     book = await database.get_book_by_id(session, book_id)
     if book is None:
-        raise BookNotFoundError(f"id={book_id} 的书不存在")
+        raise BookNotFoundError(constant.FAIL_BOOK_NOT_FOUND.format(book_id=book_id))
     if book.status == BookStatus.BORROWED.value:
-        raise BookUnavailableError(f"id={book_id} 的书已被借出")
+        raise BookUnavailableError(constant.FAIL_BOOK_ALREADY_BORROWED.format(book_id=book_id))
     await database.update_book_status(session, book_id, BookStatus.BORROWED.value)
     updated = await database.get_book_by_id(session, book_id)
-    return BookOut(id=updated.id, title=updated.title, author=updated.author, status=updated.status)
+    return BookOut.model_validate(updated)
 
 
 
@@ -26,31 +27,31 @@ async def return_book(session:AsyncSession,book_id: int) -> BookOut:
 
     book = await database.get_book_by_id(session,book_id)
     if book is None:
-        raise BookNotFoundError(f"id={book_id} 的书不存在")
+        raise BookNotFoundError(constant.FAIL_BOOK_NOT_FOUND.format(book_id=book_id))
     if book.status == BookStatus.AVAILABLE.value:
-        raise BookNotBorrowedError(f"id={book_id} 的书还未借出")
+        raise BookNotBorrowedError(constant.FAIL_BOOK_NOT_BORROWED.format(book_id=book_id))
     await database.update_book_status(session, book_id, BookStatus.AVAILABLE.value)
     updated = await database.get_book_by_id(session, book_id)
-    return BookOut(id=updated.id, title=updated.title, author=updated.author, status=updated.status)
+    return BookOut.model_validate(updated)
 
 
 async def get_book(session:AsyncSession,book_id: int)->BookOut:
     
     book = await database.get_book_by_id(session, book_id)
     if book is None:
-        raise BookNotFoundError(f"id={book_id} 的书不存在")
-    return BookOut(id=book.id, title=book.title, author=book.author, status=book.status)
+        raise BookNotFoundError(constant.FAIL_BOOK_NOT_FOUND.format(book_id=book_id))
+    return BookOut.model_validate(book)
 
 
 
 
 async def get_books(session:AsyncSession)->list[BookOut]:
     books = await database.get_all_books(session)
-    return [BookOut(id=b.id, title=b.title, author=b.author, status=b.status) for b in books]
+    return [BookOut.model_validate(b) for b in books]
 
 async def search_books(session:AsyncSession,keyword:str)->list[BookOut]:
     books = await database.search_books(session,keyword)
-    return [BookOut(id=b.id, title=b.title, author=b.author, status=b.status) for b in books]
+    return [BookOut.model_validate(b) for b in books]
     
 
 

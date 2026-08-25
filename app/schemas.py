@@ -1,5 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 class BookStatus(Enum):
     AVAILABLE = "available"
@@ -7,6 +7,7 @@ class BookStatus(Enum):
 
 
 class BookBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id:int | None = None
     title:str
     author:str
