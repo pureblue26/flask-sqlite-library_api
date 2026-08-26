@@ -1,4 +1,11 @@
 
+def _auth_headers(client):
+    """注册 + 登录，返回带 token 的请求头（借书/还书现在需要认证）。"""
+    client.post("/register", json={"username": "张三", "password": "123456"})
+    token = client.post("/login", json={"username": "张三", "password": "123456"}).json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_create_book(client):
     r = client.post("/books", json={"title": "三体", "author": "刘慈欣"})
     assert r.status_code == 201
@@ -24,30 +31,34 @@ def test_get_book_not_found(client):
 
 
 def test_borrow_book(client):
+    headers = _auth_headers(client)
     client.post("/books", json={"title": "三体", "author": "刘慈欣"})
-    r = client.post("/books/1/borrow")
+    r = client.post("/books/1/borrow", headers=headers)
     assert r.status_code == 200
     assert r.json()["status"] == "borrowed"
 
 
 def test_borrow_borrowed_book(client):
+    headers = _auth_headers(client)
     client.post("/books", json={"title": "三体", "author": "刘慈欣"})
-    client.post("/books/1/borrow")
-    r = client.post("/books/1/borrow")
+    client.post("/books/1/borrow", headers=headers)
+    r = client.post("/books/1/borrow", headers=headers)
     assert r.status_code == 400
 
 
 def test_return_book(client):
+    headers = _auth_headers(client)
     client.post("/books", json={"title": "三体", "author": "刘慈欣"})
-    client.post("/books/1/borrow")
-    r = client.post("/books/1/return")
+    client.post("/books/1/borrow", headers=headers)
+    r = client.post("/books/1/return", headers=headers)
     assert r.status_code == 200
     assert r.json()["status"] == "available"
 
 
 def test_return_not_borrowed(client):
+    headers = _auth_headers(client)
     client.post("/books", json={"title": "三体", "author": "刘慈欣"})
-    r = client.post("/books/1/return")
+    r = client.post("/books/1/return", headers=headers)
     assert r.status_code == 400
 
 

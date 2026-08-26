@@ -1,10 +1,9 @@
 from sqlalchemy import Integer, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column
+from app.models.base import BaseModel
 
-class Base(DeclarativeBase):
-    pass
 
-class Book(Base):
+class Book(BaseModel):
     __tablename__ = "books"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)

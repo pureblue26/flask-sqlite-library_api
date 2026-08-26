@@ -1,27 +1,41 @@
 import app.config as config
 import app.constant as constant
-import app.database as database
-import app.services as services
-from app.schemas import (
+from app.database import books, base
+import app.services.books as books
+from app.services import auth
+from app.schemas.book import (
     BookCreate,
     BookOut,
     BookNotFoundError,
     BookUnavailableError,
     BookNotBorrowedError,
 )
-from fastapi import FastAPI,Depends
+from app.schemas.user import (
+    UserOut,
+    UserCreate,
+    UserLogin,
+    UserNotFoundError,
+    InvalidTokenError,
+    DuplicateUsernameError,
+)
+from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
 from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.schemas.token import Token
+from app.security import oauth
+from app.models.user import User
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await database.init_db()
+    await base.init_db()
     yield
 
-app = FastAPI(title="图书管理 API", version="3.0", lifespan=lifespan)
+app = FastAPI(title="图书管理 API", version="4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,65 +45,116 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.exception_handler(BookNotFoundError) 
-async def handle_not_found(request,exc):
+# ---- 异常处理 ----
+@app.exception_handler(BookNotFoundError)
+async def handle_not_found(request, exc):
     return JSONResponse(status_code=404, content={"message": str(exc)})
 
 
 @app.exception_handler(BookUnavailableError)
-async def handle_unavailable(request,exc):
+async def handle_unavailable(request, exc):
     return JSONResponse(status_code=400, content={"message": str(exc)})
 
 
 @app.exception_handler(BookNotBorrowedError)
-async def handle_not_borrowed(request,exc):
+async def handle_not_borrowed(request, exc):
     return JSONResponse(status_code=400, content={"message": str(exc)})
 
 
+@app.exception_handler(InvalidTokenError)
+async def handle_invalid_token(request, exc):
+    return JSONResponse(status_code=401, content={"message": str(exc)})
 
+
+@app.exception_handler(UserNotFoundError)
+async def handle_user_not_found(request, exc):
+    return JSONResponse(status_code=404, content={"message": str(exc)})
+
+
+@app.exception_handler(DuplicateUsernameError)
+async def handle_duplicate_username(request, exc):
+    return JSONResponse(status_code=400, content={"message": str(exc)})
+
+
+# ---- 图书接口 ----
 @app.get("/books", response_model=list[BookOut])
 async def list_books(
-    q: str | None = None, 
-    session: AsyncSession = Depends(database.get_session)):
+    q: str | None = None,
+    session: AsyncSession = Depends(base.get_session),
+):
     if q:
-        return await services.search_books(session, q)
-    return await services.get_books(session)
+        return await books.search_books(session, q)
+    return await books.get_books(session)
 
-@app.post("/books",response_model=BookOut,status_code=201)
+
+@app.post("/books", response_model=BookOut, status_code=201)
 async def create_book(
-    book_in:BookCreate,
-    session: AsyncSession = Depends(database.get_session)):
-    return await database.create_book(session,**book_in.model_dump())
+    book_in: BookCreate,
+    session: AsyncSession = Depends(base.get_session),
+):
+    return await books.create_book(session, **book_in.model_dump())
 
 
-@app.get("/books/{book_id}",response_model=BookOut)
+@app.get("/books/{book_id}", response_model=BookOut)
 async def get_book(
     book_id: int,
-    session: AsyncSession = Depends(database.get_session)):
-    return await services.get_book(session,book_id)
+    session: AsyncSession = Depends(base.get_session),
+):
+    return await books.get_book(session, book_id)
 
 
-@app.post("/books/{book_id}/borrow",response_model=BookOut)
+@app.post("/books/{book_id}/borrow", response_model=BookOut)
 async def borrow_book(
     book_id: int,
-    session: AsyncSession = Depends(database.get_session)):
-    return await services.borrow_book(session,book_id)
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),  # 受保护！
+):
+    return await books.borrow_book(session, book_id)
 
 
-@app.post("/books/{book_id}/return",response_model=BookOut,status_code=200)
+@app.post("/books/{book_id}/return", response_model=BookOut, status_code=200)
 async def return_book(
     book_id: int,
-    session: AsyncSession = Depends(database.get_session)):
-    return await services.return_book(session,book_id)
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),  # 受保护！
+):
+    return await books.return_book(session, book_id)
 
 
-@app.post("/books/{book_id}/delete",status_code=200)
+@app.post("/books/{book_id}/delete", status_code=200)
 async def delete_book(
     book_id: int,
-     session: AsyncSession = Depends(database.get_session)):
-    await services.get_book(session,book_id)
-    await database.delete_book(session,book_id)
+    session: AsyncSession = Depends(base.get_session),
+):
+    await books.get_book(session, book_id)
+    await books.delete_book(session, book_id)
     return {"message": constant.SUCCESS_DELETE_BOOK}
+
+
+# ---- 认证接口 ----
+@app.post("/register", response_model=UserOut, status_code=201)
+async def register(
+    user_in: UserCreate,
+    session: AsyncSession = Depends(base.get_session),
+):
+    """注册：用户名 + 明文密码。"""
+    return await auth.register(session, user_in.username, user_in.password)
+
+
+@app.post("/login", response_model=Token)
+async def login(
+    user_in: UserLogin,
+    session: AsyncSession = Depends(base.get_session),
+):
+    """登录：验证用户名密码 → 返回 token。"""
+    return await auth.user_login(session, user_in.username, user_in.password)
+
+
+@app.get("/users/me", response_model=UserOut)
+async def get_me(current_user: User = Depends(oauth.get_current_user)):
+    """获取当前登录用户信息（身份来自 token，不传 id）。"""
+    return UserOut.model_validate(current_user)
+
 
 @app.get("/")
 def root():
@@ -97,7 +162,7 @@ def root():
 
 
 async def main():
-    await database.init_db()
+    await base.init_db()
 
 if __name__ == "__main__":
-   asyncio.run(main())
+    asyncio.run(main())

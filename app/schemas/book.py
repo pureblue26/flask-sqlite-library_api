@@ -1,20 +1,20 @@
 from enum import Enum
-from pydantic import BaseModel, ConfigDict
+from app.schemas.base import schemasModel 
 
 class BookStatus(Enum):
     AVAILABLE = "available"
     BORROWED = "borrowed"
 
 
-class BookBase(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+class BookBase(schemasModel):
+   
     id:int | None = None
     title:str
     author:str
     status:str = "available"
 
 
-class BookCreate(BaseModel):
+class BookCreate(schemasModel):
     title:str
     author:str
 

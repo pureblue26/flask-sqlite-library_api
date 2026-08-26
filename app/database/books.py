@@ -1,29 +1,10 @@
 
-
 import asyncio
-from app.config import DATABASE_URL
-from app.models import Base, Book
+from app.models import Book
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
 )
 from sqlalchemy import select
-from typing import AsyncGenerator
-
-engine = create_async_engine(DATABASE_URL, echo=False)
-SessionFactory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-
-
-
-async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    async with SessionFactory() as session:
-        yield session
 
 
 async def create_book(session:AsyncSession,title: str, author: str) -> Book:
@@ -65,11 +46,7 @@ async def search_books(session:AsyncSession,keyword:str)->list[Book]:
     return list(result.scalars().all())
 
 async def main():
-    await init_db()
-    async with SessionFactory() as session:
-        books = await get_all_books(session)
-    for book in books:
-        print(book)
+    pass
 
 
 if __name__ == "__main__":
