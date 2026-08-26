@@ -156,6 +156,36 @@ async def get_me(current_user: User = Depends(oauth.get_current_user)):
     return UserOut.model_validate(current_user)
 
 
+@app.post("/users/me/update-name", response_model=UserOut)
+async def update_username(
+    new_username: str,
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),
+):
+    """修改当前用户的名字（身份来自 token）。"""
+    return await auth.update_username(session, current_user.id, new_username)
+
+
+@app.post("/users/me/update-password", response_model=UserOut)
+async def update_password(
+    new_password: str,
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),
+):
+    """修改当前用户的密码（身份来自 token）。"""
+    return await auth.update_password(session, current_user.id, new_password)
+
+
+@app.delete("/users/me", status_code=200)
+async def delete_me(
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),
+):
+    """注销当前用户（身份来自 token）。"""
+    await auth.delete_user(session, current_user.id)
+    return {"message": constant.SUCCESS_DELETE_BOOK}
+
+
 @app.get("/")
 def root():
     return "欢迎来到图书馆"
