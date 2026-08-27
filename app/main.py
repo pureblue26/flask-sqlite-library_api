@@ -1,4 +1,4 @@
-import app.config as config
+from app.core.settings import get_settings
 import app.constant as constant
 from app.database import books, base
 import app.services.books as books
@@ -41,7 +41,7 @@ app = FastAPI(title="图书管理 API", version="4.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=config.ORIGIN,
+    allow_origins=get_settings().ORIGIN,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

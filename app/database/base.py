@@ -5,7 +5,10 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 from app.models import Book, User, BaseModel
-from app.config import DATABASE_URL
+from app.core.settings import get_settings
+
+settings = get_settings()
+DATABASE_URL = settings.db_url
 
 
 engine = create_async_engine(DATABASE_URL, echo=False)

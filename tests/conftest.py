@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from app.config import DATABASE_URL
+from app.core.settings import get_settings
 from app.models.base import BaseModel
 from app.main import app
 
@@ -19,7 +19,7 @@ from app.main import app
 @pytest.fixture
 def client():
     """每个测试前：建测试引擎、建表、清空，返回 FastAPI TestClient。"""
-    engine = create_async_engine(DATABASE_URL, poolclass=NullPool)
+    engine = create_async_engine(get_settings().db_url, poolclass=NullPool)
     TestSession = async_sessionmaker(engine, expire_on_commit=False)
 
     async def setup():
