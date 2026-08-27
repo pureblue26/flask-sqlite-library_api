@@ -35,3 +35,6 @@ PORT = 8000
 DEBUG = True
 ORIGIN = "http://localhost:3000"
 
+# 种子脚本账号（从 .env 读；默认值只是开发兜底，生产部署时覆盖为强密码）
+USER = os.getenv("SEED_USERNAME", "admin")
+USER_PASSWORD = os.getenv("SEED_PASSWORD", "admin123")
