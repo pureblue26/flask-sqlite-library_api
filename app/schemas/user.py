@@ -34,3 +34,8 @@ class UserNotFoundError(Exception):
 class DuplicateUsernameError(Exception):
     """用户名已存在。"""
     pass
+
+
+class PermissionDeniedError(Exception):
+    """没有权限执行此操作。"""
+    pass

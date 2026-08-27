@@ -55,16 +55,21 @@ def test_users_me_fake_token(client):
 
 def test_borrow_requires_auth(client):
     """借书需要登录：无 token → 401。"""
-    client.post("/books", json={"title": "三体", "author": "刘慈欣"})
+    from tests.conftest import make_admin, register_and_login
+    admin_headers, admin_id = register_and_login(client, username="admin")
+    make_admin(client, admin_id)
+    client.post("/books", json={"title": "三体", "author": "刘慈欣"}, headers=admin_headers)
     r = client.post("/books/1/borrow")
     assert r.status_code == 401
 
 
 def test_borrow_with_token(client):
     """带 token 借书 → 成功。"""
-    client.post("/books", json={"title": "三体", "author": "刘慈欣"})
-    client.post("/register", json={"username": "张三", "password": "123456"})
-    token = client.post("/login", json={"username": "张三", "password": "123456"}).json()["access_token"]
-    r = client.post("/books/1/borrow", headers={"Authorization": f"Bearer {token}"})
+    from tests.conftest import make_admin, register_and_login
+    admin_headers, admin_id = register_and_login(client, username="admin")
+    make_admin(client, admin_id)
+    client.post("/books", json={"title": "三体", "author": "刘慈欣"}, headers=admin_headers)
+    user_headers, _ = register_and_login(client, username="张三")
+    r = client.post("/books/1/borrow", headers=user_headers)
     assert r.status_code == 200
     assert r.json()["status"] == "borrowed"

@@ -9,7 +9,11 @@ from app.database import base
 from app.database.users import get_user_by_id
 from app.models.user import User
 from app.security.token import decode_token
-from app.schemas.user import InvalidTokenError, UserNotFoundError
+from app.schemas.user import (
+    InvalidTokenError,
+    UserNotFoundError,
+    PermissionDeniedError,
+)
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -29,3 +33,12 @@ async def get_current_user(
     if user is None:
         raise UserNotFoundError("用户不存在")
     return user
+
+
+async def get_current_admin(
+    current_user: User = Depends(get_current_user),
+) -> User:
+    """要求当前用户是管理员，否则抛 PermissionDeniedError（403）。"""
+    if current_user.role != "admin":
+        raise PermissionDeniedError("需要管理员权限")
+    return current_user

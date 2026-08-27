@@ -17,6 +17,7 @@ from app.schemas.user import (
     UserNotFoundError,
     InvalidTokenError,
     DuplicateUsernameError,
+    PermissionDeniedError,
 )
 from fastapi import FastAPI, Depends
 from fastapi.responses import JSONResponse
@@ -26,6 +27,7 @@ from contextlib import asynccontextmanager
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.token import Token
+from app.schemas.borrow_record import BorrowRecordOut
 from app.security import oauth
 from app.models.user import User
 
@@ -76,6 +78,11 @@ async def handle_duplicate_username(request, exc):
     return JSONResponse(status_code=400, content={"message": str(exc)})
 
 
+@app.exception_handler(PermissionDeniedError)
+async def handle_permission_denied(request, exc):
+    return JSONResponse(status_code=403, content={"message": str(exc)})
+
+
 # ---- 图书接口 ----
 @app.get("/books", response_model=list[BookOut])
 async def list_books(
@@ -91,6 +98,7 @@ async def list_books(
 async def create_book(
     book_in: BookCreate,
     session: AsyncSession = Depends(base.get_session),
+    admin: User = Depends(oauth.get_current_admin),  # 管理员才能建书
 ):
     return await books.create_book(session, **book_in.model_dump())
 
@@ -109,7 +117,7 @@ async def borrow_book(
     session: AsyncSession = Depends(base.get_session),
     current_user: User = Depends(oauth.get_current_user),  # 受保护！
 ):
-    return await books.borrow_book(session, book_id)
+    return await books.borrow_book(session, book_id, current_user.id)
 
 
 @app.post("/books/{book_id}/return", response_model=BookOut, status_code=200)
@@ -125,6 +133,7 @@ async def return_book(
 async def delete_book(
     book_id: int,
     session: AsyncSession = Depends(base.get_session),
+    admin: User = Depends(oauth.get_current_admin),  # 管理员才能删书
 ):
     await books.get_book(session, book_id)
     await books.delete_book(session, book_id)
@@ -184,6 +193,25 @@ async def delete_me(
     """注销当前用户（身份来自 token）。"""
     await auth.delete_user(session, current_user.id)
     return {"message": constant.SUCCESS_DELETE_BOOK}
+
+
+@app.get("/users/me/records", response_model=list[BorrowRecordOut])
+async def get_my_records(
+    session: AsyncSession = Depends(base.get_session),
+    current_user: User = Depends(oauth.get_current_user),
+):
+    """当前用户的借书记录（只看自己的）。"""
+    return await books.get_my_records(session, current_user.id)
+
+
+@app.get("/admin/records", response_model=list[BorrowRecordOut])
+async def admin_records_by_title(
+    title: str,
+    session: AsyncSession = Depends(base.get_session),
+    admin: User = Depends(oauth.get_current_admin),
+):
+    """管理员：按书名查借书记录。"""
+    return await books.get_records_by_title(session, title)
 
 
 @app.get("/")
