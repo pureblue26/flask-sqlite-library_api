@@ -1,7 +1,13 @@
+# 基础镜像默认走 DaoCloud 代理，这样 `docker compose up -d` 不必直连 Docker Hub。
+# 能访问 Docker Hub 时，可在项目根目录 `.env` 里改回官方镜像，例如：
+#   POSTGRES_IMAGE=postgres:16
+#   PYTHON_IMAGE=python:3.12-slim
+#   NGINX_IMAGE=nginx:alpine
+
 services:
   # ---- 数据库 ----
   db:
-    image: postgres:16
+    image: ${POSTGRES_IMAGE:-docker.m.daocloud.io/library/postgres:16}
     container_name: library_db
     environment:
       POSTGRES_USER: library
@@ -19,7 +25,11 @@ services:
 
   # ---- 后端 API（FastAPI）----
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-docker.m.daocloud.io/library/python:3.12-slim}
     container_name: library_app
     environment:
       APP_ENV: ${APP_ENV:-dev}
@@ -34,7 +44,11 @@ services:
 
   # ---- 前端 + 反向代理（Nginx）----
   web:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+      args:
+        NGINX_IMAGE: ${NGINX_IMAGE:-docker.m.daocloud.io/library/nginx:alpine}
     container_name: library_web
     ports:
       - "80:80"

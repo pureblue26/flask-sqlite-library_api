@@ -1,5 +1,7 @@
 # 后端 API 镜像：FastAPI + uv
-FROM python:3.12-slim
+# PYTHON_IMAGE 可通过 compose 覆盖；默认走国内镜像，避免直连 Docker Hub 失败
+ARG PYTHON_IMAGE=docker.m.daocloud.io/library/python:3.12-slim
+FROM ${PYTHON_IMAGE}
 
 WORKDIR /app
 
