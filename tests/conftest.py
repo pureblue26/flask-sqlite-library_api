@@ -1,4 +1,4 @@
-"""pytest 共享配置（4.1：PostgreSQL 版，测试专用 NullPool 引擎）。
+﻿"""pytest 共享配置（4.1：PostgreSQL 版，测试专用 NullPool 引擎）。
 
 关键：测试用独立引擎（NullPool，每次新连接），
 避免 TestClient 与全局引擎连接池的事件循环冲突。
@@ -80,7 +80,8 @@ def make_admin(client, user_id: int) -> None:
 
 def register_and_login(client, username="张三", password="123456"):
     """测试辅助：注册 + 登录，返回 (headers, user_id)。"""
-    r = client.post("/register", json={"username": username, "password": password})
+    r = client.post("/api/register", json={"username": username, "password": password})
     user_id = r.json()["id"]
-    token = client.post("/login", json={"username": username, "password": password}).json()["access_token"]
+    token = client.post("/api/login", json={"username": username, "password": password}).json()["access_token"]
     return {"Authorization": f"Bearer {token}"}, user_id
+

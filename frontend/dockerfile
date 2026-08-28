@@ -1,0 +1,8 @@
+# 前端镜像：基于 nginx，托管静态页面 + 反向代理 API
+FROM nginx:alpine
+
+# 前端页面
+COPY index.html /usr/share/nginx/html/
+
+# Nginx 配置（托管前端 + /api 反代到后端）
+COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -19,7 +19,7 @@ from app.schemas.user import (
     DuplicateUsernameError,
     PermissionDeniedError,
 )
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, APIRouter
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import asyncio
@@ -39,9 +39,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="图书管理 API", version="4.0", lifespan=lifespan)
 
+# 业务路由统一挂到 /api 前缀（前端通过 /api 访问，Nginx 反代到后端）
+api_router = APIRouter(prefix="/api")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=get_settings().ORIGIN,
+    allow_origins=["*"],  # 开发期允许所有来源；生产环境收紧为具体域名
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,7 +87,7 @@ async def handle_permission_denied(request, exc):
 
 
 # ---- 图书接口 ----
-@app.get("/books", response_model=list[BookOut])
+@api_router.get("/books", response_model=list[BookOut])
 async def list_books(
     q: str | None = None,
     session: AsyncSession = Depends(base.get_session),
@@ -94,7 +97,7 @@ async def list_books(
     return await books.get_books(session)
 
 
-@app.post("/books", response_model=BookOut, status_code=201)
+@api_router.post("/books", response_model=BookOut, status_code=201)
 async def create_book(
     book_in: BookCreate,
     session: AsyncSession = Depends(base.get_session),
@@ -103,7 +106,7 @@ async def create_book(
     return await books.create_book(session, **book_in.model_dump())
 
 
-@app.get("/books/{book_id}", response_model=BookOut)
+@api_router.get("/books/{book_id}", response_model=BookOut)
 async def get_book(
     book_id: int,
     session: AsyncSession = Depends(base.get_session),
@@ -111,7 +114,7 @@ async def get_book(
     return await books.get_book(session, book_id)
 
 
-@app.post("/books/{book_id}/borrow", response_model=BookOut)
+@api_router.post("/books/{book_id}/borrow", response_model=BookOut)
 async def borrow_book(
     book_id: int,
     session: AsyncSession = Depends(base.get_session),
@@ -120,7 +123,7 @@ async def borrow_book(
     return await books.borrow_book(session, book_id, current_user.id)
 
 
-@app.post("/books/{book_id}/return", response_model=BookOut, status_code=200)
+@api_router.post("/books/{book_id}/return", response_model=BookOut, status_code=200)
 async def return_book(
     book_id: int,
     session: AsyncSession = Depends(base.get_session),
@@ -129,7 +132,7 @@ async def return_book(
     return await books.return_book(session, book_id)
 
 
-@app.post("/books/{book_id}/delete", status_code=200)
+@api_router.post("/books/{book_id}/delete", status_code=200)
 async def delete_book(
     book_id: int,
     session: AsyncSession = Depends(base.get_session),
@@ -141,7 +144,7 @@ async def delete_book(
 
 
 # ---- 认证接口 ----
-@app.post("/register", response_model=UserOut, status_code=201)
+@api_router.post("/register", response_model=UserOut, status_code=201)
 async def register(
     user_in: UserCreate,
     session: AsyncSession = Depends(base.get_session),
@@ -150,7 +153,7 @@ async def register(
     return await auth.register(session, user_in.username, user_in.password)
 
 
-@app.post("/login", response_model=Token)
+@api_router.post("/login", response_model=Token)
 async def login(
     user_in: UserLogin,
     session: AsyncSession = Depends(base.get_session),
@@ -159,13 +162,13 @@ async def login(
     return await auth.user_login(session, user_in.username, user_in.password)
 
 
-@app.get("/users/me", response_model=UserOut)
+@api_router.get("/users/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(oauth.get_current_user)):
     """获取当前登录用户信息（身份来自 token，不传 id）。"""
     return UserOut.model_validate(current_user)
 
 
-@app.post("/users/me/update-name", response_model=UserOut)
+@api_router.post("/users/me/update-name", response_model=UserOut)
 async def update_username(
     new_username: str,
     session: AsyncSession = Depends(base.get_session),
@@ -175,7 +178,7 @@ async def update_username(
     return await auth.update_username(session, current_user.id, new_username)
 
 
-@app.post("/users/me/update-password", response_model=UserOut)
+@api_router.post("/users/me/update-password", response_model=UserOut)
 async def update_password(
     new_password: str,
     session: AsyncSession = Depends(base.get_session),
@@ -185,7 +188,7 @@ async def update_password(
     return await auth.update_password(session, current_user.id, new_password)
 
 
-@app.delete("/users/me", status_code=200)
+@api_router.delete("/users/me", status_code=200)
 async def delete_me(
     session: AsyncSession = Depends(base.get_session),
     current_user: User = Depends(oauth.get_current_user),
@@ -195,7 +198,7 @@ async def delete_me(
     return {"message": constant.SUCCESS_DELETE_BOOK}
 
 
-@app.get("/users/me/records", response_model=list[BorrowRecordOut])
+@api_router.get("/users/me/records", response_model=list[BorrowRecordOut])
 async def get_my_records(
     session: AsyncSession = Depends(base.get_session),
     current_user: User = Depends(oauth.get_current_user),
@@ -204,7 +207,7 @@ async def get_my_records(
     return await books.get_my_records(session, current_user.id)
 
 
-@app.get("/admin/records", response_model=list[BorrowRecordOut])
+@api_router.get("/admin/records", response_model=list[BorrowRecordOut])
 async def admin_records_by_title(
     title: str,
     session: AsyncSession = Depends(base.get_session),
@@ -218,9 +221,13 @@ async def admin_records_by_title(
 def root():
     return "欢迎来到图书馆"
 
+# 注册业务路由（/api 前缀）
+app.include_router(api_router)
+
 
 async def main():
     await base.init_db()
 
 if __name__ == "__main__":
     asyncio.run(main())
+

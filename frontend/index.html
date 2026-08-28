@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图书管理</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: "Microsoft YaHei", sans-serif; background: #f5f7fa; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { color: #2c3e50; margin-bottom: 20px; }
+
+        /* 登录区 */
+        .login-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .login-box input { padding: 8px 12px; margin-right: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        .login-box button { padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .login-box button:hover { background: #2980b9; }
+        .login-box button.logout { background: #e74c3c; }
+        .status { margin-top: 10px; font-size: 14px; color: #7f8c8d; }
+
+        /* 图书区 */
+        .books-box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        .toolbar { margin-bottom: 15px; display: flex; gap: 10px; align-items: center; }
+        .toolbar input { padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; flex: 1; }
+        .toolbar button { padding: 8px 16px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; color: #2c3e50; }
+        .btn { padding: 5px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-borrow { background: #3498db; color: white; }
+        .btn-return { background: #f39c12; color: white; }
+        .btn-disabled { background: #bdc3c7; cursor: not-allowed; }
+        .msg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; }
+        .msg.ok { display: block; background: #d4edda; color: #155724; }
+        .msg.err { display: block; background: #f8d7da; color: #721c24; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📚 图书管理</h1>
+
+        <!-- 登录区 -->
+        <div class="login-box" id="loginBox">
+            <input type="text" id="username" placeholder="用户名" value="admin">
+            <input type="password" id="password" placeholder="密码" value="admin123">
+            <button onclick="login()">登录</button>
+            <span class="status" id="loginStatus"></span>
+        </div>
+        <div class="login-box hidden" id="userBox">
+            <span>当前用户: <strong id="currentUser"></strong></span>
+            <button class="logout" onclick="logout()">退出登录</button>
+        </div>
+
+        <!-- 图书区（登录后可见） -->
+        <div class="books-box hidden" id="booksBox">
+            <div class="toolbar">
+                <input type="text" id="newTitle" placeholder="书名">
+                <input type="text" id="newAuthor" placeholder="作者">
+                <input type="number" id="newYear" placeholder="出版年份">
+                <button onclick="createBook()">添加图书</button>
+            </div>
+            <table>
+                <thead>
+                    <tr><th>ID</th><th>书名</th><th>作者</th><th>年份</th><th>状态</th><th>操作</th></tr>
+                </thead>
+                <tbody id="bookList"></tbody>
+            </table>
+            <div class="msg" id="msg"></div>
+        </div>
+    </div>
+
+    <script>
+        // API 地址（开发时后端地址）
+        const API = "/api";
+        let token = null;
+        let userId = null;
+
+        // ---- 登录 ----
+        async function login() {
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            const res = await fetch(`${API}/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                token = data.access_token;
+                document.getElementById("loginBox").classList.add("hidden");
+                document.getElementById("userBox").classList.remove("hidden");
+                document.getElementById("booksBox").classList.remove("hidden");
+                document.getElementById("currentUser").textContent = username;
+                loadBooks();
+            } else {
+                document.getElementById("loginStatus").textContent = "登录失败: " + (data.message || "未知错误");
+            }
+        }
+
+        function logout() {
+            token = null;
+            location.reload();
+        }
+
+        // ---- 图书操作 ----
+        async function api(path, options = {}) {
+            const headers = { "Content-Type": "application/json" };
+            if (token) headers["Authorization"] = `Bearer ${token}`;
+            const res = await fetch(`${API}${path}`, { ...options, headers });
+            return res;
+        }
+
+        async function loadBooks() {
+            const res = await api("/books");
+            const books = await res.json();
+            const tbody = document.getElementById("bookList");
+            tbody.innerHTML = "";
+            books.forEach(b => {
+                const tr = document.createElement("tr");
+                const statusText = b.status === "available" ? "在馆" : "已借出";
+                const action = b.status === "available"
+                    ? `<button class="btn btn-borrow" onclick="borrowBook(${b.id})">借书</button>`
+                    : `<button class="btn btn-return" onclick="returnBook(${b.id})">还书</button>`;
+                tr.innerHTML = `
+                    <td>${b.id}</td><td>${b.title}</td><td>${b.author}</td>
+                    <td>${b.published_year || "-"}</td><td>${statusText}</td><td>${action}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function borrowBook(id) {
+            const res = await api(`/books/${id}/borrow`, { method: "POST" });
+            showMsg(res);
+            loadBooks();
+        }
+
+        async function returnBook(id) {
+            const res = await api(`/books/${id}/return`, { method: "POST" });
+            showMsg(res);
+            loadBooks();
+        }
+
+        async function createBook() {
+            const title = document.getElementById("newTitle").value;
+            const author = document.getElementById("newAuthor").value;
+            const year = document.getElementById("newYear").value;
+            const res = await api("/books", {
+                method: "POST",
+                body: JSON.stringify({ title, author, published_year: year ? parseInt(year) : null }),
+            });
+            showMsg(res);
+            loadBooks();
+        }
+
+        function showMsg(res) {
+            const msg = document.getElementById("msg");
+            if (res.ok) {
+                msg.className = "msg ok";
+                msg.textContent = "操作成功";
+            } else {
+                res.json().then(d => {
+                    msg.className = "msg err";
+                    msg.textContent = "失败: " + (d.message || "未知错误");
+                });
+            }
+        }
+    </script>
+</body>
+</html>
