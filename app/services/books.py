@@ -61,8 +61,8 @@ async def search_books(session: AsyncSession, keyword: str) -> list[BookOut]:
     return [BookOut.model_validate(b) for b in books]
 
 
-async def create_book(session: AsyncSession, title: str, author: str) -> BookOut:
-    return await books_db.create_book(session, title=title, author=author)
+async def create_book(session: AsyncSession, title: str, author: str, published_year: int | None = None) -> BookOut:
+    return await books_db.create_book(session, title=title, author=author, published_year=published_year)
 
 
 async def delete_book(session: AsyncSession, book_id: int) -> None:

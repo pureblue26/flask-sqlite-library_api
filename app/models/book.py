@@ -9,3 +9,4 @@ class Book(BaseModel):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     author: Mapped[str] = mapped_column(String(255), nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="available", nullable=False)
+    published_year: Mapped[int | None] = mapped_column(Integer, nullable=True)

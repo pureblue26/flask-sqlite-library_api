@@ -12,11 +12,13 @@ class BookBase(schemasModel):
     title:str
     author:str
     status:str = "available"
+    published_year:int | None = None
 
 
 class BookCreate(schemasModel):
     title:str
     author:str
+    published_year:int | None = None
 
 class BookOut(BookBase):
     pass

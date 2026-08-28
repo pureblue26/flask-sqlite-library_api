@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import (
 from sqlalchemy import select
 
 
-async def create_book(session:AsyncSession,title: str, author: str) -> Book:
-    book = Book(title=title,author=author)
+async def create_book(session:AsyncSession,title: str, author: str, published_year: int | None = None) -> Book:
+    book = Book(title=title,author=author,published_year=published_year)
     session.add(book)
     await session.commit()
     await session.refresh(book)
