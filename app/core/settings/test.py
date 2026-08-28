@@ -4,6 +4,7 @@ from app.core.settings.settings import BaseSettings
 
 
 class TestSettings(BaseSettings):
-    DEBUG = False
-    DB_NAME = "library_test"
-    SECRET_KEY = "test-secret"
+    def __init__(self):
+        super().__init__()
+        self.DEBUG = False
+        # DB_NAME/SECRET_KEY 等从 .env.test 读取

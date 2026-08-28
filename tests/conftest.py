@@ -5,6 +5,10 @@
 """
 
 import asyncio
+import os
+
+# 强制测试使用 test 环境（必须在 import app 之前设置）
+os.environ["APP_ENV"] = "test"
 
 import pytest
 from sqlalchemy import text

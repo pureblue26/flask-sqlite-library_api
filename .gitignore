@@ -9,7 +9,10 @@ __pycache__/
 *.db
 
 # 环境变量/密钥（含敏感信息，绝不入 git！）
+# 保留 .env.example（模板）作为参照
 .env
+.env.*
+!.env.example
 
 # 编辑器/系统文件
 .vscode/
