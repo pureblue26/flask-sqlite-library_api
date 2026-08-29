@@ -1,5 +1,6 @@
 # 前端镜像：基于 nginx，托管静态页面 + 反向代理 API
-FROM nginx:alpine
+ARG NGINX_IMAGE=docker.m.daocloud.io/library/nginx:alpine
+FROM ${NGINX_IMAGE}
 
 # 前端页面
 COPY index.html /usr/share/nginx/html/
